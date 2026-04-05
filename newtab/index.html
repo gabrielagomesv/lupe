@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lupe</title>
+  <link rel="icon" type="image/png" href="../favicon.png" />
+
+  <!-- Material Symbols -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="navbar__left">
+        <div class="view-toggle">
+          <button class="view-toggle__btn active" id="btnGrid" data-view="grid">Everything</button>
+          <button class="view-toggle__btn" id="btnSpaces" data-view="spaces">Collections</button>
+        </div>
+      </div>
+
+      <div class="navbar__search">
+        <img src="../assets/lupe.svg" alt="Lupe" class="navbar__search-icon" />
+        <input
+          type="text"
+          class="navbar__search-input"
+          id="searchInput"
+          placeholder="Search...."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="navbar__search-clear" id="searchClear" aria-label="Clear search">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="navbar__right">
+        <div class="mode-menu-wrap" id="modeModeWrap">
+          <button class="btn-mode-toggle" id="btnModeToggle" title="View options">
+            <span class="material-symbols-outlined">grid_view</span>
+          </button>
+          <div class="mode-menu" id="modeMenu">
+            <button class="mode-menu__item" data-mode="compact">
+              <span class="material-symbols-outlined">view_list</span>
+            </button>
+          </div>
+        </div>
+        <div class="add-menu-wrap" id="addMenuWrap">
+          <button class="btn-add" id="btnAdd" title="Add">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <div class="add-menu" id="addMenu">
+            <button class="add-menu__item" id="addMenuLink">
+              <span class="material-symbols-outlined">link</span>
+              Add link
+            </button>
+            <button class="add-menu__item" id="addMenuCollection">
+              <span class="material-symbols-outlined">folder</span>
+              Add collection
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Collection creation modal -->
+    <div class="collection-modal-overlay hidden" id="collectionModalOverlay">
+      <div class="collection-modal">
+        <p class="collection-modal__label">New collection</p>
+        <input
+          type="text"
+          class="collection-modal__input"
+          id="collectionModalInput"
+          placeholder="Collection name..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="collection-modal__actions">
+          <button class="collection-modal__btn collection-modal__btn--cancel" id="collectionModalCancel">Cancel</button>
+          <button class="collection-modal__btn collection-modal__btn--save" id="collectionModalSave">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- collection bar (kept for JS compatibility, hidden via CSS) -->
+    <div class="collection-bar" id="collectionBar" style="display:none"></div>
+
+    <!-- Main content -->
+    <main class="main">
+      <div class="grid-view" id="gridView">
+        <!-- Cards populated by JS -->
+      </div>
+      <div class="spaces-view hidden" id="spacesView">
+        <!-- Groups populated by JS -->
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Drawer -->
+  <aside class="drawer" id="drawer">
+    <div class="drawer__header">
+      <span class="drawer__title">Save a tab or link</span>
+      <button class="drawer__close" id="drawerClose">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="drawer__body">
+      <div class="tab-list" id="tabList">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <div class="drawer__footer">
+      <div class="url-row">
+        <input
+          type="url"
+          class="url-input"
+          id="urlInput"
+          placeholder="Or insert your link here..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="btn-url-clear" id="btnUrlClear" aria-label="Clear URL">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <button class="btn-send" id="btnSave" disabled>
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </div>
+      <div class="collection-row" id="collectionRow">
+        <div class="collection-chips" id="collectionChips"></div>
+        <div class="collection-input-wrap">
+          <input
+            type="text"
+            class="collection-text-input"
+            id="collectionTextInput"
+            placeholder="Add collection..."
+            autocomplete="off"
+          />
+          <button class="btn-collection-clear" id="btnCollectionClear" aria-label="Clear collection">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Snackbar container -->
+  <div id="snackbarContainer"></div>
+
+  <script src="utils/storage.js"></script>
+  <script src="utils/detector.js"></script>
+  <script src="utils/metadata.js"></script>
+  <script src="components/card.js"></script>
+  <script src="components/skeleton.js"></script>
+  <script src="components/drawer.js"></script>
+  <script src="components/snackbar.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

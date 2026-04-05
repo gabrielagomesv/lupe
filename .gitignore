@@ -1,0 +1,4 @@
+.claude/
+*.png
+!favicon.png
+!icons/

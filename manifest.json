@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Lupe",
+  "description": "Save and organize links visually",
+  "version": "1.0.0",
+  "chrome_url_overrides": {
+    "newtab": "newtab/index.html"
+  },
+  "permissions": [
+    "tabs",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://api.microlink.io/*",
+    "https://www.youtube.com/oembed*",
+    "https://www.googleapis.com/books/*",
+    "https://www.google.com/s2/favicons*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16":  "favicon.png",
+    "48":  "favicon.png",
+    "128": "favicon.png"
+  },
+  "action": {
+    "default_title": "Lupe"
+  }
+}
