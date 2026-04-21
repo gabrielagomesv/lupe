@@ -11,9 +11,11 @@ const Detector = (() => {
     'dailymotion.com', 'twitch.tv', 'loom.com',
   ];
 
+  // Amazon ASINs starting with B are general products, not books.
+  // Real book ASINs are ISBN-10 format (digits only, e.g. 0321534719).
   const BOOK_RULES = [
-    { host: 'amazon.com',        path: /\/dp\//i },
-    { host: 'amazon.com.br',     path: /\/dp\//i },
+    { host: 'amazon.com',        path: /\/dp\/(?!B)[A-Z0-9]{10}/i },
+    { host: 'amazon.com.br',     path: /\/dp\/(?!B)[A-Z0-9]{10}/i },
     { host: 'books.google.com',  path: null },
     { host: 'openlibrary.org',   path: null },
     { host: 'goodreads.com',     path: /\/book\//i },

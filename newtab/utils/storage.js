@@ -11,9 +11,11 @@ const Storage = (() => {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
+  const store = chrome.storage.local;
+
   async function getAll() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get([KEY], (result) => {
+      store.get([KEY], (result) => {
         resolve(result[KEY] || []);
       });
     });
@@ -33,7 +35,7 @@ const Storage = (() => {
     };
     items.unshift(newItem);
     return new Promise((resolve) => {
-      chrome.storage.sync.set({ [KEY]: items }, () => resolve(newItem));
+      store.set({ [KEY]: items }, () => resolve(newItem));
     });
   }
 
@@ -41,7 +43,7 @@ const Storage = (() => {
     const items = await getAll();
     const filtered = items.filter((i) => i.id !== id);
     return new Promise((resolve) => {
-      chrome.storage.sync.set({ [KEY]: filtered }, resolve);
+      store.set({ [KEY]: filtered }, resolve);
     });
   }
 
@@ -51,7 +53,7 @@ const Storage = (() => {
     if (idx === -1) return;
     items[idx].collection = collection;
     return new Promise((resolve) => {
-      chrome.storage.sync.set({ [KEY]: items }, resolve);
+      store.set({ [KEY]: items }, resolve);
     });
   }
 
@@ -61,14 +63,14 @@ const Storage = (() => {
     if (idx === -1) return;
     items[idx].type = type;
     return new Promise((resolve) => {
-      chrome.storage.sync.set({ [KEY]: items }, resolve);
+      store.set({ [KEY]: items }, resolve);
     });
   }
 
   async function getCollections() {
     const [items, stored] = await Promise.all([
       getAll(),
-      new Promise((resolve) => chrome.storage.sync.get([COL_KEY], (r) => resolve(r[COL_KEY] || []))),
+      new Promise((resolve) => store.get([COL_KEY], (r) => resolve(r[COL_KEY] || []))),
     ]);
     const fromItems = items.map((i) => i.collection).filter(Boolean);
     return [...new Set([...stored, ...fromItems])];
@@ -76,26 +78,26 @@ const Storage = (() => {
 
   async function saveCollectionName(name) {
     const stored = await new Promise((resolve) =>
-      chrome.storage.sync.get([COL_KEY], (r) => resolve(r[COL_KEY] || []))
+      store.get([COL_KEY], (r) => resolve(r[COL_KEY] || []))
     );
     if (stored.includes(name)) return;
     stored.push(name);
-    return new Promise((resolve) => chrome.storage.sync.set({ [COL_KEY]: stored }, resolve));
+    return new Promise((resolve) => store.set({ [COL_KEY]: stored }, resolve));
   }
 
   async function deleteCollectionName(name) {
     const stored = await new Promise((resolve) =>
-      chrome.storage.sync.get([COL_KEY], (r) => resolve(r[COL_KEY] || []))
+      store.get([COL_KEY], (r) => resolve(r[COL_KEY] || []))
     );
     const filtered = stored.filter((c) => c !== name);
-    return new Promise((resolve) => chrome.storage.sync.set({ [COL_KEY]: filtered }, resolve));
+    return new Promise((resolve) => store.set({ [COL_KEY]: filtered }, resolve));
   }
 
   async function deleteCollection(name) {
     const items = await getAll();
     const filtered = items.filter((i) => i.collection !== name);
     return new Promise((resolve) => {
-      chrome.storage.sync.set({ [KEY]: filtered }, resolve);
+      store.set({ [KEY]: filtered }, resolve);
     });
   }
 
@@ -103,13 +105,13 @@ const Storage = (() => {
     const items = await getAll();
     items.forEach((i) => { if (i.collection === oldName) i.collection = newName; });
     return new Promise((resolve) => {
-      chrome.storage.sync.set({ [KEY]: items }, resolve);
+      store.set({ [KEY]: items }, resolve);
     });
   }
 
   async function saveCollectionsOrder(collections) {
     return new Promise((resolve) =>
-      chrome.storage.sync.set({ [COL_KEY]: collections }, resolve)
+      store.set({ [COL_KEY]: collections }, resolve)
     );
   }
 

@@ -17,13 +17,6 @@
     <!-- Navbar -->
     <nav class="navbar">
       <div class="navbar__left">
-        <div class="view-toggle">
-          <button class="view-toggle__btn active" id="btnGrid" data-view="grid">Everything</button>
-          <button class="view-toggle__btn" id="btnSpaces" data-view="spaces">Collections</button>
-        </div>
-      </div>
-
-      <div class="navbar__search">
         <img src="../assets/lupe.svg" alt="Lupe" class="navbar__search-icon" />
         <input
           type="text"
@@ -38,16 +31,18 @@
         </button>
       </div>
 
+      <div class="navbar__search">
+        <div class="view-toggle">
+          <button class="view-toggle__btn active" id="btnGrid" data-view="grid">Everything</button>
+          <button class="view-toggle__btn" id="btnSpaces" data-view="spaces">Collections</button>
+        </div>
+      </div>
+
       <div class="navbar__right">
         <div class="mode-menu-wrap" id="modeModeWrap">
           <button class="btn-mode-toggle" id="btnModeToggle" title="View options">
             <span class="material-symbols-outlined">grid_view</span>
           </button>
-          <div class="mode-menu" id="modeMenu">
-            <button class="mode-menu__item" data-mode="compact">
-              <span class="material-symbols-outlined">view_list</span>
-            </button>
-          </div>
         </div>
         <div class="add-menu-wrap" id="addMenuWrap">
           <button class="btn-add" id="btnAdd" title="Add">
@@ -56,11 +51,11 @@
           <div class="add-menu" id="addMenu">
             <button class="add-menu__item" id="addMenuLink">
               <span class="material-symbols-outlined">link</span>
-              Add link
+              Save a link
             </button>
             <button class="add-menu__item" id="addMenuCollection">
               <span class="material-symbols-outlined">folder</span>
-              Add collection
+              Create a collection
             </button>
           </div>
         </div>
@@ -133,19 +128,17 @@
           <span class="material-symbols-outlined">arrow_forward</span>
         </button>
       </div>
+      <p class="url-hint" id="urlHint">please enter a valid link</p>
       <div class="collection-row" id="collectionRow">
-        <div class="collection-chips" id="collectionChips"></div>
         <div class="collection-input-wrap">
+          <div class="collection-chips" id="collectionChips"></div>
           <input
             type="text"
             class="collection-text-input"
             id="collectionTextInput"
-            placeholder="Add collection..."
+            placeholder="#collection"
             autocomplete="off"
           />
-          <button class="btn-collection-clear" id="btnCollectionClear" aria-label="Clear collection">
-            <span class="material-symbols-outlined">close</span>
-          </button>
         </div>
       </div>
     </div>

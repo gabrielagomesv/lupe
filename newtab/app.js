@@ -19,6 +19,7 @@
   const btnSpaces         = document.getElementById('btnSpaces');
   const searchInput       = document.getElementById('searchInput');
   const searchClear       = document.getElementById('searchClear');
+  const navbar            = document.querySelector('.navbar');
   const btnModeToggle     = document.getElementById('btnModeToggle');
   const modeMenu          = document.getElementById('modeMenu');
   const addMenuWrap       = document.getElementById('addMenuWrap');
@@ -31,14 +32,24 @@
   const collectionModalCancel  = document.getElementById('collectionModalCancel');
 
   // ── Boot ──────────────────────────────────────────────────────────────────
+  // Show skeleton cards immediately while storage loads.
+  // Use the cached count from last session so the number matches reality.
+  const cachedCount = Math.min(parseInt(localStorage.getItem('lupe-item-count') || '6', 10), 16);
+  for (let i = 0; i < cachedCount; i++) gridView.appendChild(Skeleton.create());
+  requestAnimationFrame(() => applyMasonry(gridView));
+
   [items, allCollections] = await Promise.all([Storage.getAll(), Storage.getCollections()]);
+  localStorage.setItem('lupe-item-count', items.length);
+
   renderCollectionBar();
   renderGrid();
   Drawer.updateCollections(allCollections);
 
   // ── Save a link (used by drawer callback and tab drag-drop) ─────────────
-  async function saveLink(url, collection) {
+  async function saveLink(url, collection, tabId) {
+    console.log('[Lupe] saveLink start', { url, collection, tabId });
     const type        = Detector.detect(url);
+    console.log('[Lupe] detected type:', type);
     const inSpaces    = currentView === 'spaces';
 
     // Only use the skeleton in grid view — running masonry on the hidden
@@ -51,13 +62,15 @@
       if (cardMode === 'preview') requestAnimationFrame(() => applyMasonry(gridView));
     }
 
-    const meta = await Metadata.fetch(url, type);
+    const meta = await Metadata.fetch(url, type, tabId);
+    console.log('[Lupe] meta result:', meta);
     const item = await Storage.save({
       url, type, collection,
       title:       meta.title,
       image:       meta.image,
       description: meta.description,
     });
+    console.log('[Lupe] Storage.save done, item:', item);
     items.unshift(item);
 
     if (!inSpaces) {
@@ -91,6 +104,14 @@
     searchClear.style.opacity = hasClear ? '1' : '0';
     searchClear.style.pointerEvents = hasClear ? 'auto' : 'none';
     renderCurrent();
+  });
+
+  searchInput.addEventListener('focus', () => {
+    navbar.classList.add('navbar--searching');
+  });
+
+  searchInput.addEventListener('blur', () => {
+    if (!searchQuery) navbar.classList.remove('navbar--searching');
   });
 
   searchClear.addEventListener('click', () => {
@@ -131,36 +152,15 @@
   }
 
   // ── Card mode toggle (preview / compact) ──────────────────────────────────
-  btnModeToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    modeMenu.classList.toggle('open');
-  });
-
-  modeMenu.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-mode]');
-    if (!btn) return;
-    setCardMode(btn.dataset.mode);
-    modeMenu.classList.remove('open');
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!document.getElementById('modeModeWrap').contains(e.target)) {
-      modeMenu.classList.remove('open');
-    }
+  btnModeToggle.addEventListener('click', () => {
+    setCardMode(cardMode === 'preview' ? 'compact' : 'preview');
   });
 
   function setCardMode(mode) {
     if (mode === cardMode) return;
     cardMode = mode;
-    // Main button icon reflects current mode
     btnModeToggle.querySelector('.material-symbols-outlined').textContent =
       mode === 'preview' ? 'grid_view' : 'view_list';
-    // Dropdown item always offers the opposite mode
-    const item = modeMenu.querySelector('.mode-menu__item');
-    const other = mode === 'preview' ? 'compact' : 'preview';
-    item.dataset.mode = other;
-    item.querySelector('.material-symbols-outlined').textContent =
-      other === 'preview' ? 'grid_view' : 'view_list';
     renderCurrent();
   }
 
@@ -237,11 +237,25 @@
     container.style.position = 'relative';
 
     cards.forEach((card) => {
-      const type  = card.dataset.type || 'site';
-      const ratio = (type !== 'book' && card.dataset.naturalRatio)
+      const type        = card.dataset.type || 'site';
+      const MAX_RATIO   = MASONRY_RATIOS.book; // 3/2 — same max height as a book card
+      const naturalRatio = (type !== 'book' && card.dataset.naturalRatio)
         ? parseFloat(card.dataset.naturalRatio)
         : (MASONRY_RATIOS[type] ?? 2/3);
+      const ratio      = Math.min(naturalRatio, MAX_RATIO);
       const cardHeight = colWidth * ratio;
+      const isCapped   = ratio < naturalRatio;
+
+      console.log('[Lupe masonry]', {
+        id: card.dataset.id,
+        type,
+        naturalRatio: card.dataset.naturalRatio,
+        naturalRatioParsed: naturalRatio,
+        ratio,
+        isCapped,
+        cardHeight,
+        classes: card.className,
+      });
 
       // Find shortest column
       let shortCol = 0;
@@ -255,14 +269,17 @@
       card.style.top      = colHeights[shortCol] + 'px';
       card.style.marginBottom = '0';
 
-      // Books and fallback cards use a fixed height; others let the image determine height
-      if (type === 'book' || card.classList.contains('card--fallback')) {
+      // Fixed height for: books, fallbacks, skeletons, and images capped at MAX_RATIO
+      if (type === 'book' || card.classList.contains('card--fallback') || card.classList.contains('card--skeleton') || isCapped) {
         card.style.height      = cardHeight + 'px';
         card.style.aspectRatio = '';
       } else {
         card.style.height      = '';
         card.style.aspectRatio = 'auto'; // overrides CSS aspect-ratio rules; image sets height
       }
+      // Capped images: contain (no crop) instead of cover
+      card.classList.toggle('card--img-contain', isCapped);
+      console.log('[Lupe masonry] after toggle, has card--img-contain:', card.classList.contains('card--img-contain'));
 
       colHeights[shortCol] += cardHeight + gap;
     });
@@ -389,7 +406,7 @@
             <span class="material-symbols-outlined">drag_indicator</span>
           </button>` : ''}
           <span class="space-group__name">${escHtml(name)}</span>
-          <span class="space-group__count">${count}</span>
+          <span class="space-group__count">(${String(count).padStart(2, '0')})</span>
           ${key !== NO_COL ? `<button class="space-group__delete" title="Delete collection">
             <span class="material-symbols-outlined">delete</span>
           </button>` : ''}

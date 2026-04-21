@@ -16,7 +16,7 @@ const Drawer = (() => {
   const collectionRow    = document.getElementById('collectionRow');
   const collectionChips  = document.getElementById('collectionChips');
   const collectionText   = document.getElementById('collectionTextInput');
-  const btnCollectionClear = document.getElementById('btnCollectionClear');
+  const urlHint          = document.getElementById('urlHint');
   const tabList          = document.getElementById('tabList');
 
   // Debounced reload — avoids thrashing during rapid tab changes
@@ -59,31 +59,17 @@ const Drawer = (() => {
       urlInput.focus();
     });
 
-    // Collection text input — match existing or create chip on Enter/blur
-    collectionText.addEventListener('input', () => {
-      const hasVal = collectionText.value.length > 0;
-      btnCollectionClear.style.opacity = hasVal ? '1' : '0';
-      btnCollectionClear.style.pointerEvents = hasVal ? 'auto' : 'none';
-    });
+    // Collection text input — commit on Enter
     collectionText.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         commitCollectionText();
         collectionText.blur();
       }
     });
-    collectionText.addEventListener('blur', commitCollectionText);
-
-    btnCollectionClear.addEventListener('click', () => {
-      collectionText.value = '';
-      btnCollectionClear.style.opacity = '0';
-      btnCollectionClear.style.pointerEvents = 'none';
-      collectionText.focus();
-    });
   }
 
   function open() {
     drawer.classList.add('open');
-    document.dispatchEvent(new CustomEvent('lupe-tab-dragstart')); // ensure spaces view is rendered
     loadTabs();
     renderChips();
     setTimeout(() => urlInput.focus(), 80);
@@ -101,10 +87,9 @@ const Drawer = (() => {
     btnUrlClear.style.opacity = '0';
     btnUrlClear.style.pointerEvents = 'none';
     collectionRow.classList.remove('visible');
+    urlHint.classList.remove('visible');
     selectedCollection = '';
     collectionText.value = '';
-    btnCollectionClear.style.opacity = '0';
-    btnCollectionClear.style.pointerEvents = 'none';
     renderChips();
   }
 
@@ -115,27 +100,28 @@ const Drawer = (() => {
     btnUrlClear.style.pointerEvents = hasClear ? 'auto' : 'none';
 
     if (!val) {
-      urlInput.classList.remove('valid', 'invalid');
+      urlInput.classList.remove('valid');
       btnSave.disabled = true;
       collectionRow.classList.remove('visible');
+      urlHint.classList.remove('visible');
       return;
     }
     try {
       new URL(val);
       urlInput.classList.add('valid');
-      urlInput.classList.remove('invalid');
       btnSave.disabled = false;
       collectionRow.classList.add('visible');
+      urlHint.classList.remove('visible');
     } catch {
-      urlInput.classList.add('invalid');
       urlInput.classList.remove('valid');
       btnSave.disabled = true;
       collectionRow.classList.remove('visible');
+      urlHint.classList.add('visible');
     }
   }
 
   function commitCollectionText() {
-    const val = collectionText.value.trim();
+    const val = collectionText.value.trim().replace(/^#/, '');
     collectionText.value = '';
     if (!val) return;
 
@@ -153,45 +139,37 @@ const Drawer = (() => {
 
   function renderChips() {
     collectionChips.innerHTML = '';
+    if (!selectedCollection) return;
 
-    // Existing known collections
-    knownCollections.forEach((col) => {
-      const chip = document.createElement('button');
-      chip.className = 'collection-chip' + (selectedCollection === col ? ' selected' : '');
-      chip.type = 'button';
+    const chip = document.createElement('span');
+    chip.className = 'collection-chip';
 
-      const label = document.createElement('span');
-      label.textContent = col;
-      chip.appendChild(label);
+    const label = document.createElement('span');
+    label.textContent = '#' + selectedCollection;
+    chip.appendChild(label);
 
-      if (selectedCollection === col) {
-        const rm = document.createElement('span');
-        rm.className = 'collection-chip__remove';
-        rm.innerHTML = '<span class="material-symbols-outlined">close</span>';
-        rm.addEventListener('click', (e) => {
-          e.stopPropagation();
-          selectedCollection = '';
-          renderChips();
-        });
-        chip.appendChild(rm);
-      }
-
-      chip.addEventListener('click', () => {
-        selectedCollection = selectedCollection === col ? '' : col;
-        renderChips();
-      });
-
-      collectionChips.appendChild(chip);
+    const rm = document.createElement('button');
+    rm.className = 'collection-chip__remove';
+    rm.type = 'button';
+    rm.innerHTML = '<span class="material-symbols-outlined">close</span>';
+    rm.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedCollection = '';
+      renderChips();
+      collectionText.focus();
     });
+    chip.appendChild(rm);
+
+    collectionChips.appendChild(chip);
   }
 
-  async function handleSave(url) {
+  async function handleSave(url, tabId) {
     const targetUrl = (typeof url === 'string' && url) ? url : urlInput.value.trim();
     if (!targetUrl) return;
 
     const collection = selectedCollection;
     close();
-    onSaveCallback && await onSaveCallback(targetUrl, collection);
+    onSaveCallback && await onSaveCallback(targetUrl, collection, tabId);
   }
 
   function loadTabs() {
@@ -230,7 +208,7 @@ const Drawer = (() => {
           </span>
         `;
 
-        item.addEventListener('click', () => handleSave(tab.url));
+        item.addEventListener('click', () => handleSave(tab.url, tab.id));
 
         // Drag tab to a collection in the spaces view
         item.draggable = true;

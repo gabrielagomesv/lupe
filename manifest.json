@@ -9,9 +9,11 @@
   "permissions": [
     "tabs",
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
+    "<all_urls>",
     "https://api.microlink.io/*",
     "https://www.youtube.com/oembed*",
     "https://www.googleapis.com/books/*",

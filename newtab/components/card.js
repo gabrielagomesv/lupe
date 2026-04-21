@@ -95,13 +95,16 @@ const Card = (() => {
     const fallback = document.createElement('div');
     fallback.className = 'card__fallback';
 
-    const titleHtml = item.title
+    const looksLikeUrl = item.title && /^https?:\/\//.test(item.title);
+    const titleHtml = (item.title && !looksLikeUrl)
       ? `<span class="card__fallback-title">${escHtml(item.title)}</span>`
       : '';
     fallback.innerHTML = `
       <img class="card__fallback-icon" src="${escHtml(faviconUrl)}" alt="" />
-      ${titleHtml}
-      <span class="card__fallback-domain">${escHtml(domain)}</span>
+      <div class="card__fallback-info">
+        ${titleHtml}
+        <span class="card__fallback-domain">${escHtml(domain)}</span>
+      </div>
     `;
     card.classList.add('card--fallback');
     card.appendChild(fallback);
@@ -190,17 +193,14 @@ const Card = (() => {
     const actions = document.createElement('div');
     actions.className = 'card__actions';
     actions.innerHTML = `
-      <button class="card__action-btn danger" title="Remove" data-action="delete">
-        <span class="material-symbols-outlined">remove</span>
-      </button>
       <button class="card__action-btn" title="Open link" data-action="open">
         <span class="material-symbols-outlined">arrow_outward</span>
       </button>
-      <button class="card__action-btn" title="Change type" data-action="retype">
-        <span class="card__type-label">#${escHtml(item.type)}</span>
-      </button>
       <button class="card__action-btn" title="Change collection" data-action="recollect">
         <span class="card__type-label card__collection-label">#${escHtml(item.collection || '—')}</span>
+      </button>
+      <button class="card__action-btn danger" title="Remove" data-action="delete">
+        <span class="material-symbols-outlined">remove</span>
       </button>
     `;
     card.appendChild(actions);
@@ -259,32 +259,38 @@ const Card = (() => {
     card.dataset.type = item.type;
 
     const domain = getDomain(item.url);
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(item.url)}&sz=32`;
+    const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(item.url)}&sz=64`;
 
-    const faviconWrap = document.createElement('div');
-    faviconWrap.className = 'card__favicon-wrap';
-    faviconWrap.innerHTML = `<img class="card__favicon" src="${faviconUrl}" alt="" loading="lazy" onerror="this.style.opacity='0'" />`;
+    // Row 1: page title
+    const name = document.createElement('div');
+    name.className = 'card__compact-name';
+    name.textContent = item.title || domain;
 
-    const info = document.createElement('div');
-    info.className = 'card__compact-info';
-    info.innerHTML = `
-      <span class="card__compact-title">${escHtml(item.title || domain)}</span>
-      <span class="card__compact-domain">${escHtml(domain)}</span>
+    // Row 2: favicon + domain url
+    const urlRow = document.createElement('div');
+    urlRow.className = 'card__compact-url-row';
+    urlRow.innerHTML = `
+      <img class="card__compact-favicon" src="${escHtml(faviconUrl)}" alt="" loading="lazy" onerror="this.style.opacity='0'" />
+      <span class="card__compact-url">${escHtml(domain)}</span>
     `;
 
+    // Actions: delete, collection tag, open
     const actions = document.createElement('div');
     actions.className = 'card__actions';
     actions.innerHTML = `
       <button class="card__action-btn danger" title="Remove" data-action="delete">
         <span class="material-symbols-outlined">remove</span>
       </button>
+      <button class="card__action-btn" title="Change collection" data-action="recollect">
+        <span class="card__type-label card__collection-label">#${escHtml(item.collection || '—')}</span>
+      </button>
       <button class="card__action-btn" title="Open link" data-action="open">
         <span class="material-symbols-outlined">arrow_outward</span>
       </button>
     `;
 
-    card.appendChild(faviconWrap);
-    card.appendChild(info);
+    card.appendChild(name);
+    card.appendChild(urlRow);
     card.appendChild(actions);
 
     actions.addEventListener('click', (e) => {
@@ -295,6 +301,8 @@ const Card = (() => {
         handleDelete(card, item, btn, onDelete);
       } else if (btn.dataset.action === 'open') {
         window.open(item.url, '_blank');
+      } else if (btn.dataset.action === 'recollect') {
+        showCollectionMenu(card, item, actions);
       }
     });
 
