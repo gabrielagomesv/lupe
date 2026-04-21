@@ -158,20 +158,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       console.warn('[Lupe BG] Strategy 2 failed:', err.message);
     }
 
-    // Strategy 3: fetch raw HTML and parse (works for SSR sites; skipped by JS-heavy sites)
-    try {
-      console.log('[Lupe BG] Strategy 3: fetching raw HTML');
-      const res = await fetch(msg.url, { headers: { Accept: 'text/html' } });
-      console.log('[Lupe BG] Strategy 3 response status:', res.status);
-      if (res.ok) {
-        const image = extractImageFromHtml(await res.text());
-        console.log('[Lupe BG] Strategy 3 result:', image);
-        if (image) { sendResponse({ image }); return; }
-      }
-    } catch (err) {
-      console.warn('[Lupe BG] Strategy 3 failed:', err.message);
-    }
-
     console.log('[Lupe BG] All strategies exhausted, no product image found');
     sendResponse({});
   })();
