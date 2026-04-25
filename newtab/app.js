@@ -21,10 +21,6 @@
   const searchClear       = document.getElementById('searchClear');
   const navbar            = document.querySelector('.navbar');
   const btnModeToggle     = document.getElementById('btnModeToggle');
-  const modeMenu          = document.getElementById('modeMenu');
-  const addMenuWrap       = document.getElementById('addMenuWrap');
-  const addMenu           = document.getElementById('addMenu');
-  const addMenuLink       = document.getElementById('addMenuLink');
   const addMenuCollection = document.getElementById('addMenuCollection');
   const collectionModalOverlay = document.getElementById('collectionModalOverlay');
   const collectionModalInput   = document.getElementById('collectionModalInput');
@@ -164,23 +160,11 @@
     renderCurrent();
   }
 
-  // ── Add menu (dropdown) ───────────────────────────────────────────────────
-  document.getElementById('btnAdd').addEventListener('click', (e) => {
-    e.stopPropagation();
-    addMenu.classList.toggle('open');
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!addMenuWrap.contains(e.target)) addMenu.classList.remove('open');
-  });
-
-  addMenuLink.addEventListener('click', () => {
-    addMenu.classList.remove('open');
-    document.getElementById('btnAdd').dispatchEvent(new CustomEvent('open-drawer'));
-  });
+  // ── FAB buttons ───────────────────────────────────────────────────────────
+  const btnAdd = document.getElementById('btnAdd');
+  btnAdd.addEventListener('click', () => btnAdd.dispatchEvent(new CustomEvent('open-drawer')));
 
   addMenuCollection.addEventListener('click', () => {
-    addMenu.classList.remove('open');
     collectionModalInput.value = '';
     collectionModalOverlay.classList.remove('hidden');
     setTimeout(() => collectionModalInput.focus(), 50);
@@ -211,7 +195,7 @@
   // Aspect height ratios: for aspect-ratio W/H, height = width * (H/W)
   const MASONRY_RATIOS = { site: 2/3, video: 9/16, image: 1, book: 3/2 };
   const MASONRY_COLS_BY_WIDTH = [
-    [1600, 5], [900, 4], [600, 3], [0, 2],
+    [900, 3], [600, 2], [0, 1],
   ];
 
   function getMasonryCols(containerWidth) {
@@ -315,6 +299,18 @@
       else document.querySelectorAll('.space-group__grid').forEach(applyMasonry);
     }, 50);
   });
+
+  // ── Hide navbar on scroll down, reveal on scroll up ──────────────────────
+  let lastScrollY = 0;
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > lastScrollY && y > 80) {
+      navbar.classList.add('navbar--hidden');
+    } else {
+      navbar.classList.remove('navbar--hidden');
+    }
+    lastScrollY = y;
+  }, { passive: true });
 
   // Debounced resize handler
   let resizeTimer;

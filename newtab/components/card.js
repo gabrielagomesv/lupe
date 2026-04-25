@@ -113,7 +113,10 @@ const Card = (() => {
 
     // Tint the card background with the favicon's dominant color
     extractDominantColor(faviconUrl).then((color) => {
-      if (color) card.style.background = color;
+      if (color) {
+        card.style.background = color;
+        card.style.setProperty('--card-text-color', textColorForBg(color));
+      }
     });
   }
 
@@ -124,7 +127,9 @@ const Card = (() => {
     card.dataset.type = item.type;
 
     // Placeholder color always as background base
-    card.style.background = placeholderColor(item.id);
+    const bg = placeholderColor(item.id);
+    card.style.background = bg;
+    card.style.setProperty('--card-text-color', textColorForBg(bg));
 
     // Image — skip entirely for Notion (login walls make images unusable)
     if (isNotionUrl(item.url)) {
@@ -181,11 +186,15 @@ const Card = (() => {
     overlay.className = 'card__overlay';
     card.appendChild(overlay);
 
-    // Footer (title) — not shown for images
-    if (item.type !== 'image' && item.title) {
+    // Footer (title) — not shown for images; always created so title is clickable on hover
+    if (item.type !== 'image') {
       const footer = document.createElement('div');
       footer.className = 'card__footer';
-      footer.innerHTML = `<p class="card__title">${escHtml(item.title)}</p>`;
+      footer.innerHTML = `<p class="card__title">${escHtml(item.title || '')}</p>`;
+      footer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleRename(card, item);
+      });
       card.appendChild(footer);
     }
 
@@ -193,9 +202,6 @@ const Card = (() => {
     const actions = document.createElement('div');
     actions.className = 'card__actions';
     actions.innerHTML = `
-      <button class="card__action-btn" title="Open link" data-action="open">
-        <span class="material-symbols-outlined">arrow_outward</span>
-      </button>
       <button class="card__action-btn" title="Change collection" data-action="recollect">
         <span class="card__type-label card__collection-label">#${escHtml(item.collection || '—')}</span>
       </button>
@@ -224,9 +230,9 @@ const Card = (() => {
       }
     });
 
-    // Open on card click (not on action buttons)
+    // Open on card click (not on action buttons or footer title)
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.card__actions, .card__collection')) return;
+      if (e.target.closest('.card__actions, .card__collection, .card__footer')) return;
       window.open(item.url, '_blank');
     });
 
@@ -261,10 +267,14 @@ const Card = (() => {
     const domain = getDomain(item.url);
     const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(item.url)}&sz=64`;
 
-    // Row 1: page title
+    // Row 1: page title (click to rename)
     const name = document.createElement('div');
     name.className = 'card__compact-name';
     name.textContent = item.title || domain;
+    name.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleRename(card, item);
+    });
 
     // Row 2: favicon + domain url
     const urlRow = document.createElement('div');
@@ -283,9 +293,6 @@ const Card = (() => {
       </button>
       <button class="card__action-btn" title="Change collection" data-action="recollect">
         <span class="card__type-label card__collection-label">#${escHtml(item.collection || '—')}</span>
-      </button>
-      <button class="card__action-btn" title="Open link" data-action="open">
-        <span class="material-symbols-outlined">arrow_outward</span>
       </button>
     `;
 
@@ -307,7 +314,7 @@ const Card = (() => {
     });
 
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.card__actions')) return;
+      if (e.target.closest('.card__actions, .card__compact-name')) return;
       window.open(item.url, '_blank');
     });
 
@@ -331,6 +338,73 @@ const Card = (() => {
         onDelete && onDelete(item.id);
       }, 200);
     }, 800);
+  }
+
+  function handleRename(card, item) {
+    const isCompact = card.classList.contains('card--compact');
+    let titleEl;
+
+    if (isCompact) {
+      titleEl = card.querySelector('.card__compact-name');
+    } else {
+      let footer = card.querySelector('.card__footer');
+      if (!footer) {
+        footer = document.createElement('div');
+        footer.className = 'card__footer';
+        card.appendChild(footer);
+      }
+      titleEl = footer.querySelector('.card__title');
+      if (!titleEl) {
+        titleEl = document.createElement('p');
+        titleEl.className = 'card__title';
+        titleEl.textContent = '';
+        footer.appendChild(titleEl);
+      }
+    }
+
+    if (!titleEl) return;
+
+    card.classList.add('card--editing');
+
+    const input = document.createElement('input');
+    input.className = 'card__rename-input';
+    input.value = item.title || '';
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+    input.addEventListener('click', (e) => e.stopPropagation());
+
+    let done = false;
+
+    async function commit() {
+      if (done) return;
+      done = true;
+      const newTitle = input.value.trim();
+      item.title = newTitle;
+      await Storage.updateTitle(item.id, newTitle);
+      titleEl.textContent = isCompact ? (newTitle || getDomain(item.url)) : newTitle;
+      input.replaceWith(titleEl);
+      card.classList.remove('card--editing');
+      if (!isCompact) {
+        const fallbackTitle = card.querySelector('.card__fallback-title');
+        if (fallbackTitle) {
+          fallbackTitle.textContent = (newTitle && !/^https?:\/\//.test(newTitle)) ? newTitle : '';
+        }
+      }
+    }
+
+    function cancel() {
+      if (done) return;
+      done = true;
+      input.replaceWith(titleEl);
+      card.classList.remove('card--editing');
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', commit);
   }
 
   function showRetypeMenu(card, item, actionsEl) {
@@ -447,6 +521,22 @@ const Card = (() => {
       }
     };
     setTimeout(() => document.addEventListener('click', closeMenu), 0);
+  }
+
+  function textColorForBg(bg) {
+    let r, g, b;
+    const hex = bg.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    const rgb = bg.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    if (hex) {
+      r = parseInt(hex[1], 16); g = parseInt(hex[2], 16); b = parseInt(hex[3], 16);
+    } else if (rgb) {
+      [r, g, b] = [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+    } else {
+      return '#ffffff';
+    }
+    const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const lum = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    return lum > 0.179 ? '#000000' : '#ffffff';
   }
 
   function escHtml(str) {

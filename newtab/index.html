@@ -31,33 +31,10 @@
         </button>
       </div>
 
-      <div class="navbar__search">
+      <div class="navbar__right">
         <div class="view-toggle">
           <button class="view-toggle__btn active" id="btnGrid" data-view="grid">Everything</button>
           <button class="view-toggle__btn" id="btnSpaces" data-view="spaces">Collections</button>
-        </div>
-      </div>
-
-      <div class="navbar__right">
-        <div class="mode-menu-wrap" id="modeModeWrap">
-          <button class="btn-mode-toggle" id="btnModeToggle" title="View options">
-            <span class="material-symbols-outlined">grid_view</span>
-          </button>
-        </div>
-        <div class="add-menu-wrap" id="addMenuWrap">
-          <button class="btn-add" id="btnAdd" title="Add">
-            <span class="material-symbols-outlined">add</span>
-          </button>
-          <div class="add-menu" id="addMenu">
-            <button class="add-menu__item" id="addMenuLink">
-              <span class="material-symbols-outlined">link</span>
-              Save a link
-            </button>
-            <button class="add-menu__item" id="addMenuCollection">
-              <span class="material-symbols-outlined">folder</span>
-              Create a collection
-            </button>
-          </div>
         </div>
       </div>
     </nav>
@@ -94,6 +71,22 @@
       </div>
     </main>
 
+  </div>
+
+  <!-- FAB: idle trigger + 3 action buttons (fixed, bottom center) -->
+  <div class="fab" id="addMenuWrap">
+    <button class="btn-add fab__trigger" aria-label="Actions">
+      <span class="material-symbols-outlined">add</span>
+    </button>
+    <button class="btn-add fab__action" id="btnAdd" title="Save a link">
+      <span class="material-symbols-outlined">link</span>
+    </button>
+    <button class="btn-add fab__action" id="addMenuCollection" title="Create a collection">
+      <span class="material-symbols-outlined">bookmark</span>
+    </button>
+    <button class="btn-add fab__action" id="btnModeToggle" title="Toggle layout">
+      <span class="material-symbols-outlined">grid_view</span>
+    </button>
   </div>
 
   <!-- Drawer -->

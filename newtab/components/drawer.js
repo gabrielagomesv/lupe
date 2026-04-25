@@ -46,6 +46,14 @@ const Drawer = (() => {
       if (e.key === 'Escape' && drawer.classList.contains('open')) close();
     });
 
+    document.addEventListener('click', (e) => {
+      if (drawer.classList.contains('open')
+        && !drawer.contains(e.target)
+        && !e.target.closest('.fab')) {
+        close();
+      }
+    });
+
     urlInput.addEventListener('input', onUrlInput);
     urlInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !btnSave.disabled) handleSave();
@@ -168,7 +176,7 @@ const Drawer = (() => {
     if (!targetUrl) return;
 
     const collection = selectedCollection;
-    close();
+    reset();
     onSaveCallback && await onSaveCallback(targetUrl, collection, tabId);
   }
 

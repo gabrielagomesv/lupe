@@ -47,6 +47,16 @@ const Storage = (() => {
     });
   }
 
+  async function updateTitle(id, title) {
+    const items = await getAll();
+    const idx = items.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    items[idx].title = title;
+    return new Promise((resolve) => {
+      store.set({ [KEY]: items }, resolve);
+    });
+  }
+
   async function updateCollection(id, collection) {
     const items = await getAll();
     const idx = items.findIndex((i) => i.id === id);
@@ -115,5 +125,5 @@ const Storage = (() => {
     );
   }
 
-  return { getAll, save, remove, updateType, updateCollection, getCollections, saveCollectionName, deleteCollectionName, deleteCollection, renameCollection, saveCollectionsOrder };
+  return { getAll, save, remove, updateTitle, updateType, updateCollection, getCollections, saveCollectionName, deleteCollectionName, deleteCollection, renameCollection, saveCollectionsOrder };
 })();
