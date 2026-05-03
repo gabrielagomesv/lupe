@@ -67,6 +67,16 @@ const Storage = (() => {
     });
   }
 
+  async function updateForceFallback(id, val) {
+    const items = await getAll();
+    const idx = items.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    items[idx].forceFallback = val;
+    return new Promise((resolve) => {
+      store.set({ [KEY]: items }, resolve);
+    });
+  }
+
   async function updateType(id, type) {
     const items = await getAll();
     const idx = items.findIndex((i) => i.id === id);
@@ -125,5 +135,5 @@ const Storage = (() => {
     );
   }
 
-  return { getAll, save, remove, updateTitle, updateType, updateCollection, getCollections, saveCollectionName, deleteCollectionName, deleteCollection, renameCollection, saveCollectionsOrder };
+  return { getAll, save, remove, updateTitle, updateType, updateCollection, updateForceFallback, getCollections, saveCollectionName, deleteCollectionName, deleteCollection, renameCollection, saveCollectionsOrder };
 })();

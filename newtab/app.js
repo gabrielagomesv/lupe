@@ -9,7 +9,7 @@
   let currentView      = 'grid';     // 'grid' | 'spaces'
   let activeCollection = '';         // '' = all
   let searchQuery      = '';
-  let cardMode         = 'preview';  // 'preview' | 'compact'
+  let cardMode         = localStorage.getItem('lupe-card-mode') || 'preview';  // 'preview' | 'compact'
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   const gridView          = document.getElementById('gridView');
@@ -38,40 +38,43 @@
   localStorage.setItem('lupe-item-count', items.length);
 
   renderCollectionBar();
+  // Sync FAB icon with persisted card mode before first render
+  btnModeToggle.querySelector('.material-symbols-outlined').textContent =
+    cardMode === 'preview' ? 'grid_view' : 'view_list';
   renderGrid();
   Drawer.updateCollections(allCollections);
 
   // ── Save a link (used by drawer callback and tab drag-drop) ─────────────
   async function saveLink(url, collection, tabId) {
     console.log('[Lupe] saveLink start', { url, collection, tabId });
-    const type        = Detector.detect(url);
-    console.log('[Lupe] detected type:', type);
-    const inSpaces    = currentView === 'spaces';
+    const type      = Detector.detect(url);
+    const inSpaces  = currentView === 'spaces';
+    const inCompact = cardMode === 'compact';
 
-    // Only use the skeleton in grid view — running masonry on the hidden
-    // gridView while in spaces view would override its `position: absolute`
-    // and push the spaces content down the page.
+    // Only use the skeleton in grid preview mode — not in compact mode or spaces view.
     let skeleton = null;
-    if (!inSpaces) {
+    if (!inSpaces && !inCompact) {
       skeleton = Skeleton.create();
       gridView.prepend(skeleton);
-      if (cardMode === 'preview') requestAnimationFrame(() => applyMasonry(gridView));
+      requestAnimationFrame(() => applyMasonry(gridView));
     }
 
     const meta = await Metadata.fetch(url, type, tabId);
-    console.log('[Lupe] meta result:', meta);
     const item = await Storage.save({
       url, type, collection,
       title:       meta.title,
       image:       meta.image,
       description: meta.description,
     });
-    console.log('[Lupe] Storage.save done, item:', item);
     items.unshift(item);
 
     if (!inSpaces) {
-      Skeleton.replace(skeleton, item, onDeleteCard, onFilterCollection);
-      if (cardMode === 'preview') requestAnimationFrame(() => applyMasonry(gridView));
+      if (inCompact) {
+        gridView.prepend(Card.createCompact(item, onDeleteCard, onFilterCollection));
+      } else {
+        Skeleton.replace(skeleton, item, onDeleteCard, onFilterCollection);
+        requestAnimationFrame(() => applyMasonry(gridView));
+      }
     }
 
     await refreshCollections();
@@ -155,6 +158,7 @@
   function setCardMode(mode) {
     if (mode === cardMode) return;
     cardMode = mode;
+    localStorage.setItem('lupe-card-mode', mode);
     btnModeToggle.querySelector('.material-symbols-outlined').textContent =
       mode === 'preview' ? 'grid_view' : 'view_list';
     renderCurrent();
@@ -163,6 +167,13 @@
   // ── FAB buttons ───────────────────────────────────────────────────────────
   const btnAdd = document.getElementById('btnAdd');
   btnAdd.addEventListener('click', () => btnAdd.dispatchEvent(new CustomEvent('open-drawer')));
+
+  const btnPaletteToggle = document.getElementById('btnPaletteToggle');
+  btnPaletteToggle.addEventListener('click', () => {
+    const current = localStorage.getItem('lupe-color-palette') || 'dull';
+    localStorage.setItem('lupe-color-palette', current === 'dull' ? 'neon' : 'dull');
+    renderCurrent();
+  });
 
   addMenuCollection.addEventListener('click', () => {
     collectionModalInput.value = '';
@@ -301,14 +312,17 @@
   });
 
   // ── Hide navbar on scroll down, reveal on scroll up ──────────────────────
+  // Compensate for fixed navbar — keep main top padding in sync with navbar height
+  const main = document.querySelector('.main');
+  function syncNavbarHeight() {
+    main.style.paddingTop = (navbar.offsetHeight + 80) + 'px';
+  }
+  syncNavbarHeight();
+
   let lastScrollY = 0;
   window.addEventListener('scroll', () => {
     const y = window.scrollY;
-    if (y > lastScrollY && y > 80) {
-      navbar.classList.add('navbar--hidden');
-    } else {
-      navbar.classList.remove('navbar--hidden');
-    }
+    navbar.classList.toggle('navbar--hidden', y > lastScrollY && y > 80);
     lastScrollY = y;
   }, { passive: true });
 
@@ -317,6 +331,7 @@
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
+      syncNavbarHeight();
       if (cardMode !== 'preview') return;
       if (currentView === 'grid') {
         applyMasonry(gridView);
@@ -404,7 +419,7 @@
           <span class="space-group__name">${escHtml(name)}</span>
           <span class="space-group__count">(${String(count).padStart(2, '0')})</span>
           ${key !== NO_COL ? `<button class="space-group__delete" title="Delete collection">
-            <span class="material-symbols-outlined">delete</span>
+            <span class="material-symbols-outlined">remove</span>
           </button>` : ''}
         </div>
         <div class="space-group__grid"></div>

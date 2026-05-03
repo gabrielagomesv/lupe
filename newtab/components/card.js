@@ -5,15 +5,43 @@
 const Card = (() => {
   const TYPES = ['site', 'image', 'video', 'book'];
 
-  const PLACEHOLDER_COLORS = [
+  const PLACEHOLDER_COLORS_DULL = [
     '#2C2F33', '#3B3F45', '#4A3728', '#2A3B3C',
     '#3C2A4A', '#2A3C2A', '#3C3A2A', '#2A2A3C',
+    // warm
+    '#4A2C2A', '#3D2B1F', '#4A3520', '#3B2D2A',
+    '#5C3317', '#4A2E39', '#3C2020', '#4D3A2A',
+    '#5A2D2D', '#4A3020', '#3B2020', '#5C3C2A',
+    '#3E2818', '#4A2840', '#3A2030',
+    // cool
+    '#1C2A3C', '#2A3D4A', '#1E2E3C', '#2C3A4A',
+    '#1A2A3A', '#2A3C4A', '#1C3020', '#263040',
+    '#1E3048', '#283848', '#1A2C3C', '#2A3848',
+    '#1C283A', '#203040', '#1A2838',
+  ];
+
+  const PLACEHOLDER_COLORS_NEON = [
+    '#FF006E', '#FF4500', '#B2D60F', '#FF8C00',
+    '#FF1744', '#E91E8C', '#06D6A0', '#7B2FBE',
+    // warm
+    '#FF3300', '#FF6B00', '#FF2244', '#FF5500',
+    '#FF0044', '#FF7700', '#E63000', '#FF4422',
+    '#FF2200', '#FF6600', '#E84400', '#FF5522',
+    '#FF1100', '#FF8800', '#E05500',
+    // cool
+    '#00E5FF', '#00BFFF', '#0091FF', '#00CFFF',
+    '#00AAFF', '#00D4FF', '#0BD9A0', '#00FFCC',
+    '#00E0B0', '#3DFFEA', '#00C8FF', '#00FFD4',
+    '#00B8E8', '#2EFFD4', '#00D8C8',
   ];
 
   function placeholderColor(id) {
+    const palette = localStorage.getItem('lupe-color-palette') === 'neon'
+      ? PLACEHOLDER_COLORS_NEON
+      : PLACEHOLDER_COLORS_DULL;
     let hash = 0;
     for (const c of (id || '')) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
-    return PLACEHOLDER_COLORS[Math.abs(hash) % PLACEHOLDER_COLORS.length];
+    return palette[Math.abs(hash) % palette.length];
   }
 
   function getDomain(url) {
@@ -131,8 +159,8 @@ const Card = (() => {
     card.style.background = bg;
     card.style.setProperty('--card-text-color', textColorForBg(bg));
 
-    // Image — skip entirely for Notion (login walls make images unusable)
-    if (isNotionUrl(item.url)) {
+    // Image — skip for Notion (login walls) or when user forced fallback
+    if (item.forceFallback || isNotionUrl(item.url)) {
       showFallback(card, item);
     } else if (item.image) {
       const img = document.createElement('img');
@@ -199,9 +227,17 @@ const Card = (() => {
     }
 
     // Actions (top-right on hover)
+    const canToggle  = Boolean(item.image) && !isNotionUrl(item.url);
+    const isFallback = Boolean(item.forceFallback);
+
     const actions = document.createElement('div');
     actions.className = 'card__actions';
     actions.innerHTML = `
+      ${canToggle ? `
+        <button class="card__action-btn" title="${isFallback ? 'Show preview' : 'Show fallback'}" data-action="toggle-fallback">
+          <span class="material-symbols-outlined">${isFallback ? 'image' : 'hide_image'}</span>
+        </button>
+      ` : ''}
       <button class="card__action-btn" title="Change collection" data-action="recollect">
         <span class="card__type-label card__collection-label">#${escHtml(item.collection || '—')}</span>
       </button>
@@ -223,6 +259,8 @@ const Card = (() => {
         handleDelete(card, item, btn, onDelete);
       } else if (action === 'open') {
         window.open(item.url, '_blank');
+      } else if (action === 'toggle-fallback') {
+        handleToggleFallback(card, item, onDelete, onFilterCollection);
       } else if (action === 'retype') {
         showRetypeMenu(card, item, actions);
       } else if (action === 'recollect') {
@@ -279,10 +317,24 @@ const Card = (() => {
     // Row 2: favicon + domain url
     const urlRow = document.createElement('div');
     urlRow.className = 'card__compact-url-row';
-    urlRow.innerHTML = `
-      <img class="card__compact-favicon" src="${escHtml(faviconUrl)}" alt="" loading="lazy" onerror="this.style.opacity='0'" />
-      <span class="card__compact-url">${escHtml(domain)}</span>
-    `;
+
+    const favicon = document.createElement('img');
+    favicon.className = 'card__compact-favicon';
+    favicon.src = faviconUrl;
+    favicon.alt = '';
+    favicon.loading = 'lazy';
+    favicon.addEventListener('error', () => {
+      const fallback = document.createElement('span');
+      fallback.className = 'card__compact-favicon card__compact-favicon--fallback';
+      favicon.replaceWith(fallback);
+    });
+
+    const urlSpan = document.createElement('span');
+    urlSpan.className = 'card__compact-url';
+    urlSpan.textContent = domain;
+
+    urlRow.appendChild(favicon);
+    urlRow.appendChild(urlSpan);
 
     // Actions: delete, collection tag, open
     const actions = document.createElement('div');
@@ -338,6 +390,19 @@ const Card = (() => {
         onDelete && onDelete(item.id);
       }, 200);
     }, 800);
+  }
+
+  async function handleToggleFallback(card, item, onDelete, onFilterCollection) {
+    item.forceFallback = !item.forceFallback;
+    await Storage.updateForceFallback(item.id, item.forceFallback);
+    const newCard = Card.create(item, onDelete, onFilterCollection);
+    // Preserve masonry position so there's no layout jump
+    newCard.style.position = card.style.position;
+    newCard.style.width    = card.style.width;
+    newCard.style.left     = card.style.left;
+    newCard.style.top      = card.style.top;
+    card.replaceWith(newCard);
+    newCard.dispatchEvent(new CustomEvent('retype', { bubbles: true }));
   }
 
   function handleRename(card, item) {
@@ -428,7 +493,7 @@ const Card = (() => {
         background:${item.type === type ? 'rgba(16,0,235,0.08)' : 'none'};
         border:none; border-radius:0; padding:6px 12px;
         color:${item.type === type ? '#1000EB' : '#333333'};
-        font-family:Arial,sans-serif; font-size:12px;
+        font-family:Inter,sans-serif; font-size:12px;
         letter-spacing:-0.04em; cursor:pointer; text-align:left;
         transition:background 120ms ease;
       `;
@@ -485,7 +550,7 @@ const Card = (() => {
         background:${isActive ? 'rgba(16,0,235,0.08)' : 'none'};
         border:none; border-radius:0; padding:6px 12px;
         color:${isActive ? '#1000EB' : '#333333'};
-        font-family:Arial,sans-serif; font-size:12px;
+        font-family:Inter,sans-serif; font-size:12px;
         letter-spacing:-0.04em; cursor:pointer; text-align:left;
         transition:background 120ms ease; white-space:nowrap;
       `;
